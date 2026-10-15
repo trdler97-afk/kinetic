@@ -261,7 +261,7 @@
             <div>
               <label for="upVideo">Video file</label>
               <input id="upVideo" type="file" accept="video/mp4,video/webm,video/ogg" required>
-              <div class="hint">MP4, WebM or OGG, up to 500 MB.</div>
+              <div class="hint" id="sizeHint"></div>
             </div>
             <div>
               <label for="upPoster">Poster image (optional)</label>
@@ -402,14 +402,22 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* =====================================================================
-   IMPORTANT: This is a FRONT-END-ONLY demo. Accounts, the signed
-   certificate and uploads are stored in THIS browser (localStorage /
-   IndexedDB). That means no real security, no email verification and no
-   sharing between users. For a real public site you need a backend
-   (database, server-side auth, file storage, email verification).
+   SUPABASE CONFIG: paste your own values here.
+   Dashboard -> Project Settings -> API:
+     - Project URL           (looks like https://abcdxyz.supabase.co)
+     - "anon" / public key   (safe to put in a web page; row-level security protects your data)
+   NEVER paste the "service_role" key into this file. It bypasses all security.
    ===================================================================== */
+const SUPABASE_URL = "https://ukopswiuttzyzdftjoxp.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrb3Bzd2l1dHR6eXpkZnRqb3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwOTcxMTAsImV4cCI6MjEwNzY3MzExMH0.nIuJsqzhs2yylgEA4l7zos4YoUNXTim_VO-PMWXd5tE";
+const BUCKET = "media";
+const MAX_MB = 50;   // must not exceed the file size limit in your Supabase plan / bucket
+
+const configured = /^https:\/\//.test(SUPABASE_URL) && !SUPABASE_ANON_KEY.startsWith("PASTE");
+const sb = (configured && window.supabase) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const $ = s => document.querySelector(s);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
@@ -439,41 +447,10 @@ const sampleMovies = {
 };
 const genreOptions = ["Anime", ...Object.keys(sampleMovies)];
 
-/* ---------- Storage helpers ---------- */
-const USERS_KEY = "kitsune_users", SESSION_KEY = "kitsune_session", REPORTS_KEY = "kitsune_reports";
-const getUsers = () => { try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; } catch { return {}; } };
-const setUsers = u => localStorage.setItem(USERS_KEY, JSON.stringify(u));
-const getSession = () => localStorage.getItem(SESSION_KEY);
-
-function openDB() {
-  return new Promise((res, rej) => {
-    const r = indexedDB.open("kitsune", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("videos", { keyPath: "id" });
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  });
-}
-async function dbTx(mode, fn) {
-  const db = await openDB();
-  return new Promise((res, rej) => {
-    const t = db.transaction("videos", mode);
-    const req = fn(t.objectStore("videos"));
-    t.oncomplete = () => res(req && req.result);
-    t.onerror = () => rej(t.error);
-  });
-}
-
-/* ---------- Password hashing (PBKDF2 via Web Crypto) ---------- */
-const enc = new TextEncoder();
-const toB64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
-const fromB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
-async function derive(password, salt) {
-  const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  return toB64(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, key, 256));
-}
-
 /* ---------- Auth UI ---------- */
 let mode = "login";
+let user = null;   // the signed-in Supabase user
+
 function setMode(m) {
   mode = m;
   $("#tabLogin").classList.toggle("active", m === "login");
@@ -486,50 +463,62 @@ function setMode(m) {
 $("#tabLogin").onclick = () => setMode("login");
 $("#tabSignup").onclick = () => setMode("signup");
 
-function authError(t) { const m = $("#authMsg"); m.className = "msg err"; m.textContent = t; }
+function authMsg(t, ok) { const m = $("#authMsg"); m.className = "msg " + (ok ? "ok" : "err"); m.textContent = t; }
 
 $("#authForm").addEventListener("submit", async e => {
   e.preventDefault();
-  if (!window.crypto || !crypto.subtle) return authError("This browser can't run secure login. Open the page over https or localhost.");
+  if (!sb) return authMsg("Site not configured yet: add your Supabase URL and anon key near the top of the script in index.html.");
   const email = $("#email").value.trim().toLowerCase();
   const pw = $("#password").value;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return authError("Enter a valid email address.");
-  if (pw.length < 8) return authError("Password must be at least 8 characters.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return authMsg("Enter a valid email address.");
+  if (pw.length < 8) return authMsg("Password must be at least 8 characters.");
 
-  const users = getUsers();
   $("#authBtn").disabled = true;
   try {
     if (mode === "signup") {
-      if ($("#confirm").value !== pw) return authError("Passwords do not match.");
-      if (users[email]) return authError("An account with this email already exists.");
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      users[email] = { salt: toB64(salt), hash: await derive(pw, salt), legalAccepted: false };
-      setUsers(users);
+      if ($("#confirm").value !== pw) return authMsg("Passwords do not match.");
+      const { data, error } = await sb.auth.signUp({ email, password: pw });
+      if (error) return authMsg(error.message);
+      if (data.user && data.user.identities && data.user.identities.length === 0)
+        return authMsg("An account with this email already exists.");
+      if (!data.session) {   // email confirmation is switched on in Supabase
+        $("#authForm").reset(); setMode("login");
+        return authMsg("Account created. Check your email to confirm it, then log in.", true);
+      }
+      $("#authForm").reset();   // signed in straight away; the auth listener takes over
     } else {
-      const u = users[email];
-      if (!u || (await derive(pw, fromB64(u.salt))) !== u.hash) return authError("Incorrect email or password.");
+      const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (error) return authMsg(/not confirmed/i.test(error.message) ? "Please confirm your email first, then log in." : "Incorrect email or password.");
+      $("#authForm").reset();
     }
-    localStorage.setItem(SESSION_KEY, email);
-    $("#authForm").reset();
-    startApp();
+  } catch (err) {
+    authMsg("Something went wrong. Check your connection and try again.");
   } finally { $("#authBtn").disabled = false; }
 });
 
-function logout() {
-  localStorage.removeItem(SESSION_KEY);
-  $("#app").hidden = true; $("#legalModal").hidden = true; $("#playerModal").hidden = true;
+function showAuth() {
+  $("#app").hidden = true; $("#legalModal").hidden = true; $("#playerModal").hidden = true; $("#takedownModal").hidden = true;
   $("#authScreen").hidden = false;
   setMode("login");
 }
-$("#logoutBtn").onclick = logout;
+$("#logoutBtn").onclick = async () => { if (sb) await sb.auth.signOut(); user = null; showAuth(); };
+
+if (sb) {
+  sb.auth.onAuthStateChange((event, session) => {
+    const u = session ? session.user : null;
+    if (u && (!user || user.id !== u.id)) { user = u; setTimeout(startApp, 0); }
+    else if (!u && user) { user = null; setTimeout(showAuth, 0); }
+  });
+} else {
+  authMsg("Site not configured yet: add your Supabase URL and anon key near the top of the script in index.html.");
+}
 
 /* ---------- Legal certificate (first login only) ---------- */
 function showLegal(viewOnly) {
   $("#legalModal").hidden = false;
   $("#legalFoot").hidden = viewOnly;
   $("#legalViewFoot").hidden = !viewOnly;
-  const body = $("#legalBody");
-  body.scrollTop = 0;
+  $("#legalBody").scrollTop = 0;
   if (!viewOnly) {
     $("#legalCheck").checked = false; $("#legalName").value = "";
     $("#legalCheck").disabled = true; $("#legalName").disabled = true; $("#legalAccept").disabled = true;
@@ -547,16 +536,20 @@ $("#legalBody").addEventListener("scroll", checkLegalScroll);
 function updateLegalBtn() { $("#legalAccept").disabled = !($("#legalCheck").checked && $("#legalName").value.trim().length >= 3); }
 $("#legalCheck").onchange = updateLegalBtn;
 $("#legalName").oninput = updateLegalBtn;
-$("#legalAccept").onclick = () => {
-  const email = getSession(), users = getUsers();
-  if (!users[email]) return;
-  users[email].legalAccepted = true;
-  users[email].legalName = $("#legalName").value.trim();
-  users[email].legalDate = new Date().toISOString();
-  setUsers(users);
+
+$("#legalAccept").onclick = async () => {
+  if (!user) return;
+  $("#legalAccept").disabled = true;
+  const { error } = await sb.from("profiles").upsert({
+    id: user.id, legal_accepted_at: new Date().toISOString(), legal_name: $("#legalName").value.trim()
+  });
+  if (error) {
+    const m = $("#legalMsg"); m.className = "msg err"; m.textContent = "Could not save your signature. Please try again.";
+    updateLegalBtn(); return;
+  }
   $("#legalModal").hidden = true;
 };
-$("#legalDecline").onclick = logout;
+$("#legalDecline").onclick = () => $("#logoutBtn").click();
 $("#legalClose").onclick = () => { $("#legalModal").hidden = true; };
 $("#viewLegal").onclick = () => showLegal(true);
 
@@ -576,39 +569,46 @@ function buildStructure() {
   });
   const sel = $("#upGenre"); sel.replaceChildren();
   genreOptions.forEach(g => { const o = el("option", "", g); o.value = g; sel.append(o); });
+  $("#sizeHint").textContent = `MP4, WebM or OGG, up to ${MAX_MB} MB.`;
 }
 
 function hash(str) { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
-let posterURLs = [];
 
-function makeCard(title, year, upload) {
+function makeCard(title, year, upload, posterUrl) {
   const card = el("div", "card" + (upload ? " upload" : ""));
   card.dataset.title = title.toLowerCase();
   const poster = el("div", "poster");
-  if (upload && upload.poster) {
-    const url = URL.createObjectURL(upload.poster); posterURLs.push(url);
-    poster.style.backgroundImage = `url("${url}")`;
+  if (posterUrl) {
+    poster.style.backgroundImage = `url("${posterUrl}")`;
   } else {
     const h = hash(title) % 360;
     poster.style.background = `linear-gradient(145deg,hsl(${h},60%,38%),hsl(${(h + 50) % 360},65%,22%))`;
     poster.textContent = title.replace(/^(the|a|an)\s+/i, "").charAt(0).toUpperCase();
   }
   card.append(poster);
-  const info = el("div", "info"); info.append(el("h4", "", title), el("span", "", String(year)));
+  const info = el("div", "info"); info.append(el("h4", "", title), el("span", "", String(year || "")));
   card.append(info);
   if (upload) { card.append(el("div", "badge", "Community")); card.onclick = () => openPlayer(upload); }
   return card;
 }
 
 async function renderAll() {
-  posterURLs.forEach(u => URL.revokeObjectURL(u)); posterURLs = [];
-  let uploads = [];
-  try { uploads = await dbTx("readonly", s => s.getAll()) || []; } catch (e) { console.warn(e); }
-  uploads.sort((a, b) => b.created - a.created);
+  let rows = [];
+  if (sb && user) {
+    const { data, error } = await sb.from("uploads").select("*").order("created_at", { ascending: false });
+    if (!error && data) rows = data;
+  }
+  // short-lived links for poster images (the bucket is private)
+  const urlMap = {};
+  const posterPaths = rows.filter(r => r.poster_path).map(r => r.poster_path);
+  if (posterPaths.length) {
+    const { data: signed } = await sb.storage.from(BUCKET).createSignedUrls(posterPaths, 3600);
+    (signed || []).forEach(s => { if (s.signedUrl) urlMap[s.path] = s.signedUrl; });
+  }
 
   grids["Anime"].replaceChildren(...sampleAnime.map(([t, y]) => makeCard(t, y)));
   Object.entries(sampleMovies).forEach(([g, list]) => grids[g].replaceChildren(...list.map(([t, y]) => makeCard(t, y))));
-  uploads.forEach(u => { if (grids[u.genre]) grids[u.genre].prepend(makeCard(u.title, u.year, u)); });
+  rows.forEach(r => { if (grids[r.genre]) grids[r.genre].prepend(makeCard(r.title, r.year, r, urlMap[r.poster_path])); });
   applySearch();
 }
 
@@ -622,57 +622,75 @@ function applySearch() {
 $("#search").addEventListener("input", applySearch);
 
 /* ---------- Upload ---------- */
-const MAX_BYTES = 500 * 1024 * 1024;
 function upMsg(t, ok) { const m = $("#upMsg"); m.className = "msg " + (ok ? "ok" : "err"); m.textContent = t; }
+const extOf = (file, fallback) => (file.name.split(".").pop() || fallback).toLowerCase().replace(/[^a-z0-9]/g, "") || fallback;
 
 $("#uploadForm").addEventListener("submit", async e => {
   e.preventDefault();
+  if (!sb || !user) return upMsg("Please log in first.");
   const video = $("#upVideo").files[0], poster = $("#upPoster").files[0];
   if (!$("#upRights").checked) return upMsg("You must confirm you hold the rights to this content.");
   if (!video) return upMsg("Choose a video file.");
   if (!/^video\/(mp4|webm|ogg)$/.test(video.type)) return upMsg("Video must be MP4, WebM or OGG.");
-  if (video.size > MAX_BYTES) return upMsg("Video is larger than 500 MB.");
+  if (video.size > MAX_MB * 1024 * 1024) return upMsg(`Video is larger than ${MAX_MB} MB.`);
   if (poster && !/^image\/(png|jpeg|webp)$/.test(poster.type)) return upMsg("Poster must be PNG, JPG or WebP.");
   if (poster && poster.size > 5 * 1024 * 1024) return upMsg("Poster must be under 5 MB.");
 
-  const rec = {
-    id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
-    owner: getSession(), title: $("#upTitle").value.trim(), genre: $("#upGenre").value,
-    year: $("#upYear").value, desc: $("#upDesc").value.trim(),
-    video, poster: poster || null, created: Date.now(), rightsDeclared: true
-  };
-  $("#upBtn").disabled = true; upMsg("Uploading...", true);
+  const id = crypto.randomUUID();
+  const videoPath = `${user.id}/${id}/video.${extOf(video, "mp4")}`;
+  const posterPath = poster ? `${user.id}/${id}/poster.${extOf(poster, "jpg")}` : null;
+  const uploaded = [];
+
+  $("#upBtn").disabled = true; upMsg("Uploading... please keep this page open.", true);
   try {
-    await dbTx("readwrite", s => s.put(rec));
-    $("#uploadForm").reset(); upMsg("Uploaded! Find it in the " + rec.genre + " section.", true);
+    let r = await sb.storage.from(BUCKET).upload(videoPath, video, { contentType: video.type, upsert: false });
+    if (r.error) throw r.error;
+    uploaded.push(videoPath);
+    if (poster) {
+      r = await sb.storage.from(BUCKET).upload(posterPath, poster, { contentType: poster.type, upsert: false });
+      if (r.error) throw r.error;
+      uploaded.push(posterPath);
+    }
+    const ins = await sb.from("uploads").insert({
+      id, owner: user.id, uploader_name: (user.email || "user").split("@")[0],
+      title: $("#upTitle").value.trim(), genre: $("#upGenre").value, year: Number($("#upYear").value),
+      description: $("#upDesc").value.trim(), video_path: videoPath, poster_path: posterPath, rights_declared: true
+    });
+    if (ins.error) throw ins.error;
+    const genre = $("#upGenre").value;
+    $("#uploadForm").reset();
+    upMsg("Uploaded! Find it in the " + genre + " section.", true);
     await renderAll();
   } catch (err) {
-    upMsg("Upload failed: your browser may be out of storage space.");
+    if (uploaded.length) await sb.storage.from(BUCKET).remove(uploaded);   // don't leave orphan files behind
+    upMsg("Upload failed: " + (err.message || "unknown error"));
   } finally { $("#upBtn").disabled = false; }
 });
 
 /* ---------- Player ---------- */
-let currentUpload = null, videoURL = null;
-function openPlayer(u) {
+let currentUpload = null;
+async function openPlayer(u) {
   currentUpload = u;
-  videoURL = URL.createObjectURL(u.video);
-  $("#plVideo").src = videoURL;
   $("#plTitle").textContent = u.title;
-  $("#plMeta").textContent = `${u.genre} · ${u.year} · Uploaded by ${u.owner.split("@")[0]}`;
-  $("#plDesc").textContent = u.desc || "";
-  $("#plDelete").hidden = u.owner !== getSession();
+  $("#plMeta").textContent = `${u.genre} · ${u.year} · Uploaded by ${u.uploader_name}`;
+  $("#plDesc").textContent = u.description || "";
+  $("#plDelete").hidden = !user || u.owner !== user.id;
   $("#playerModal").hidden = false;
+  const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(u.video_path, 3600);
+  if (error || !data) { $("#plDesc").textContent = "Could not load this video."; return; }
+  $("#plVideo").src = data.signedUrl;
 }
 function closePlayer() {
-  $("#plVideo").pause(); $("#plVideo").removeAttribute("src"); $("#plVideo").load();
-  if (videoURL) URL.revokeObjectURL(videoURL); videoURL = null;
+  const v = $("#plVideo"); v.pause(); v.removeAttribute("src"); v.load();
   $("#playerModal").hidden = true;
 }
 $("#plClose").onclick = closePlayer;
 $("#plDelete").onclick = async () => {
-  if (!currentUpload || currentUpload.owner !== getSession()) return;
+  if (!currentUpload || !user || currentUpload.owner !== user.id) return;
   if (!confirm("Delete this upload permanently?")) return;
-  await dbTx("readwrite", s => s.delete(currentUpload.id));
+  const { error } = await sb.from("uploads").delete().eq("id", currentUpload.id);
+  if (error) return alert("Could not delete: " + error.message);
+  await sb.storage.from(BUCKET).remove([currentUpload.video_path, currentUpload.poster_path].filter(Boolean));
   closePlayer(); renderAll();
 };
 $("#plReport").onclick = () => { const t = currentUpload ? currentUpload.title : ""; closePlayer(); openTakedown(t); };
@@ -684,15 +702,15 @@ function openTakedown(title) {
 }
 $("#openTakedown").onclick = () => openTakedown("");
 $("#tdClose").onclick = () => { $("#takedownModal").hidden = true; };
-$("#takedownForm").addEventListener("submit", e => {
+$("#takedownForm").addEventListener("submit", async e => {
   e.preventDefault();
-  let list = []; try { list = JSON.parse(localStorage.getItem(REPORTS_KEY)) || []; } catch {}
-  list.push({
-    name: $("#tdName").value.trim(), email: $("#tdEmail").value.trim(), work: $("#tdWork").value.trim(),
-    where: $("#tdWhere").value.trim(), goodFaith: true, date: new Date().toISOString()
+  const m = $("#tdMsg");
+  const { error } = await sb.from("reports").insert({
+    name: $("#tdName").value.trim(), email: $("#tdEmail").value.trim(),
+    work_description: $("#tdWork").value.trim(), content_title: $("#tdWhere").value.trim(), good_faith: true
   });
-  localStorage.setItem(REPORTS_KEY, JSON.stringify(list));
-  const m = $("#tdMsg"); m.className = "msg ok"; m.textContent = "Notice received. It will be reviewed.";
+  if (error) { m.className = "msg err"; m.textContent = "Could not send the notice. Please try again."; return; }
+  m.className = "msg ok"; m.textContent = "Notice received. It will be reviewed.";
   setTimeout(() => { $("#takedownModal").hidden = true; }, 1400);
 });
 
@@ -708,18 +726,17 @@ window.addEventListener("scroll", () => {
 
 /* ---------- Start ---------- */
 let built = false;
-function startApp() {
-  const email = getSession(), users = getUsers();
-  if (!email || !users[email]) { logout(); return; }
+async function startApp() {
+  if (!user) return;
   $("#authScreen").hidden = true; $("#app").hidden = false;
-  $("#who").textContent = email;
+  $("#who").textContent = user.email || "";
   $("#year").textContent = new Date().getFullYear();
   if (!built) { buildStructure(); built = true; }
-  renderAll();
-  if (!users[email].legalAccepted) showLegal(false);   // first login only
+  await renderAll();
+  // First login only: show the certificate until it has been signed
+  const { data: prof } = await sb.from("profiles").select("legal_accepted_at").eq("id", user.id).maybeSingle();
+  if (!prof || !prof.legal_accepted_at) showLegal(false);
 }
-
-if (getSession()) startApp(); else setMode("login");
 </script>
 </body>
 </html>
