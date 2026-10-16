@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kitsune | Anime & Movies</title>
+<title>Peaceful Chebakia | Anime & Movies</title>
 <!--
   ORIGINALITY NOTE: All colours, layout, copy and sample titles in this file are original.
   No third-party logos, artwork, fonts, brand names or real film/anime titles are used.
@@ -14,150 +14,208 @@
   Have a qualified lawyer review it before launching publicly.
 -->
 <style>
+  /* Palette taken from the Makazi site: near-black base, white text, teal accent, blue glow */
   :root {
-    --bg: #0e0b14;
-    --panel: #181322;
-    --panel-2: #221b30;
-    --text: #f2eefb;
-    --muted: #9a90b3;
-    --accent: #ff7a3d;
-    --accent-2: #b36bff;
-    --danger: #ff5d73;
-    --ok: #4fd18b;
+    --bg: #111;
+    --bg-2: #161616;
+    --panel: #1a1a1a;
+    --panel-2: #232323;
+    --line: #2c2c2c;
+    --text: #fff;
+    --text-soft: #d8d8d8;
+    --muted: #9a9a9a;
+    --accent: #00cc99;
+    --accent-dark: #009977;
+    --accent-2: #3399ff;
+    --glow: rgba(0, 204, 153, 0.8);
+    --danger: #ff6b6b;
+    --ok: #00cc99;
     --radius: 14px;
+    --serif: Georgia, "Times New Roman", serif;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-color: #333 transparent; }
   html { scroll-behavior: smooth; scroll-padding-top: 130px; }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg); color: var(--text); line-height: 1.5;
+    background-color: var(--bg); color: var(--text); line-height: 1.6;
+    background-image:
+      radial-gradient(900px 500px at 8% -8%, rgba(0,204,153,0.10), transparent 60%),
+      radial-gradient(800px 500px at 100% 8%, rgba(51,153,255,0.08), transparent 60%);
+    background-attachment: fixed;
   }
+  ::selection { background: var(--accent); color: #111; }
   a { color: inherit; text-decoration: none; }
   [hidden] { display: none !important; }
   button { font-family: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  /* ---------- Buttons ---------- */
   .btn {
     padding: 12px 26px; border-radius: 999px; font-weight: 700; border: 0;
-    background: linear-gradient(90deg, var(--accent), #ff4d6d); color: #fff;
-    display: inline-block; font-size: 0.95rem;
+    background: linear-gradient(90deg, var(--accent-dark), #00b386); color: #fff;
+    display: inline-block; font-size: 0.95rem; letter-spacing: 0.2px;
+    box-shadow: 0 0 12px rgba(0,153,119,0.55);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, border-color 0.25s ease;
   }
-  .btn.alt { background: var(--panel-2); }
+  .btn:hover { transform: translateY(-2px); background: linear-gradient(90deg, #00b386, var(--accent)); box-shadow: 0 0 18px var(--glow); }
+  .btn.alt { background: var(--panel-2); box-shadow: none; border: 1px solid var(--line); }
+  .btn.alt:hover { background: var(--panel-2); border-color: var(--accent); box-shadow: 0 0 14px rgba(0,204,153,0.35); }
   .btn.small { padding: 7px 16px; font-size: 0.85rem; }
-  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn.danger { background: var(--panel-2); color: var(--danger); box-shadow: none; border: 1px solid var(--line); }
+  .btn.danger:hover { background: var(--panel-2); border-color: var(--danger); box-shadow: 0 0 12px rgba(255,107,107,0.35); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 
+  /* ---------- Forms ---------- */
   input, select, textarea {
-    width: 100%; background: var(--panel-2); border: 1px solid #332a46; color: var(--text);
+    width: 100%; background: var(--panel-2); border: 1px solid #333; color: var(--text);
     padding: 11px 14px; border-radius: 10px; font: inherit; outline: none;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
   }
-  input:focus, select:focus, textarea:focus { border-color: var(--accent-2); }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,204,153,0.18); }
   input[type=checkbox] { width: auto; margin-top: 4px; accent-color: var(--accent); }
   label { display: block; font-size: 0.85rem; color: var(--muted); margin: 14px 0 6px; }
-  .check { display: flex; gap: 10px; align-items: flex-start; font-size: 0.88rem; color: var(--text); margin-top: 16px; }
+  .check { display: flex; gap: 10px; align-items: flex-start; font-size: 0.88rem; color: var(--text-soft); margin-top: 16px; }
   .check span { flex: 1; }
   .msg { margin-top: 12px; font-size: 0.9rem; min-height: 1.2em; }
   .msg.err { color: var(--danger); }
   .msg.ok { color: var(--ok); }
 
+  /* ---------- Logo ---------- */
+  .logo { font-family: var(--serif); font-size: 1.45rem; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap; }
+  .logo span { color: var(--accent); text-shadow: 0 0 10px rgba(0,204,153,0.45); }
+
   /* ---------- Auth screen ---------- */
   #authScreen {
     min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
     background:
-      radial-gradient(circle at 15% 20%, rgba(179,107,255,0.28), transparent 50%),
-      radial-gradient(circle at 85% 80%, rgba(255,122,61,0.22), transparent 50%);
+      radial-gradient(600px 400px at 15% 20%, rgba(0,204,153,0.16), transparent 60%),
+      radial-gradient(600px 400px at 85% 80%, rgba(51,153,255,0.14), transparent 60%);
   }
   .auth-box {
-    width: 100%; max-width: 420px; background: var(--panel); border: 1px solid #2a2238;
-    border-radius: 20px; padding: 34px 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    width: 100%; max-width: 420px; background: rgba(26,26,26,0.92); border: 1px solid var(--line);
+    border-radius: 22px; padding: 36px 30px;
+    box-shadow: 0 0 30px rgba(0,204,153,0.12), 0 24px 60px rgba(0,0,0,0.6);
   }
-  .logo { font-size: 1.6rem; font-weight: 800; }
-  .logo span { color: var(--accent); }
+  .auth-box .logo { font-size: 1.8rem; }
   .auth-box .tagline { color: var(--muted); font-size: 0.92rem; margin: 6px 0 22px; }
   .tabs { display: flex; background: var(--panel-2); border-radius: 999px; padding: 4px; margin-bottom: 8px; }
-  .tabs button {
-    flex: 1; border: 0; background: transparent; color: var(--muted); padding: 9px;
-    border-radius: 999px; font-weight: 700;
-  }
-  .tabs button.active { background: var(--bg); color: var(--text); }
+  .tabs button { flex: 1; border: 0; background: transparent; color: var(--muted); padding: 9px; border-radius: 999px; font-weight: 700; transition: 0.25s; }
+  .tabs button.active { background: var(--bg); color: var(--accent); box-shadow: 0 0 10px rgba(0,204,153,0.25); }
   .auth-box .btn { width: 100%; margin-top: 22px; }
   .fineprint { color: var(--muted); font-size: 0.78rem; margin-top: 16px; text-align: center; }
 
   /* ---------- Header ---------- */
   header {
-    position: sticky; top: 0; z-index: 50; background: rgba(14,11,20,0.92);
-    backdrop-filter: blur(10px); border-bottom: 1px solid #2a2238;
+    position: sticky; top: 0; z-index: 50; background: rgba(17,17,17,0.88);
+    backdrop-filter: blur(12px); border-bottom: 1px solid var(--line);
   }
   .bar { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; gap: 20px; padding: 14px 20px; }
-  nav { display: flex; gap: 6px; }
-  nav a { padding: 8px 16px; border-radius: 999px; color: var(--muted); font-weight: 600; transition: 0.2s; }
-  nav a:hover, nav a.active { background: var(--panel-2); color: var(--text); }
+  nav { display: flex; gap: 4px; }
+  nav a { padding: 8px 14px; border-radius: 999px; color: var(--accent); font-weight: 700; transition: color 0.3s ease, background 0.3s ease, text-shadow 0.3s ease; }
+  nav a:hover { color: #fff; text-shadow: 0 0 5px var(--accent), 0 0 10px var(--accent); }
+  nav a.active { background: var(--panel-2); color: #fff; box-shadow: inset 0 -2px 0 var(--accent); }
   .right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
   .search input { border-radius: 999px; width: 210px; padding: 9px 16px; }
   .who { color: var(--muted); font-size: 0.82rem; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .genre-nav { max-width: 1200px; margin: 0 auto; display: flex; gap: 8px; overflow-x: auto; padding: 0 20px 12px; scrollbar-width: thin; }
-  .genre-nav a { flex: none; font-size: 0.85rem; padding: 6px 14px; border-radius: 999px; border: 1px solid #2f2640; color: var(--muted); transition: 0.2s; }
-  .genre-nav a:hover { border-color: var(--accent); color: var(--text); }
+  .genre-nav a { flex: none; font-size: 0.85rem; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); transition: 0.25s; }
+  .genre-nav a:hover { border-color: var(--accent); color: #fff; box-shadow: 0 0 12px rgba(0,204,153,0.35); }
 
-  /* ---------- Hero & sections ---------- */
-  .hero {
-    text-align: center; padding: 70px 20px 50px;
-    background:
-      radial-gradient(circle at 20% 20%, rgba(179,107,255,0.25), transparent 50%),
-      radial-gradient(circle at 80% 30%, rgba(255,122,61,0.22), transparent 50%);
+  /* ---------- Hero ---------- */
+  .hero { position: relative; overflow: hidden; text-align: center; padding: 96px 20px 76px; }
+  .hero::before, .hero::after {
+    content: ""; position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.22;
+    z-index: 0; animation: drift 14s ease-in-out infinite alternate;
   }
-  .hero h1 { font-size: clamp(2rem, 6vw, 3.4rem); line-height: 1.1; }
-  .hero h1 em { font-style: normal; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .hero p { color: var(--muted); max-width: 560px; margin: 16px auto 28px; }
+  .hero::before { width: 380px; height: 380px; background: var(--accent); top: -130px; left: 8%; }
+  .hero::after { width: 320px; height: 320px; background: var(--accent-2); bottom: -130px; right: 8%; animation-delay: -6s; }
+  .hero > * { position: relative; z-index: 1; }
+  .hero h1 { font-family: var(--serif); font-size: clamp(2.1rem, 6vw, 3.8rem); line-height: 1.12; font-weight: 700; letter-spacing: -0.5px; }
+  .hero h1 em {
+    font-style: normal; color: transparent; -webkit-background-clip: text; background-clip: text;
+    background-image: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent)); background-size: 200% auto;
+    animation: shine 6s linear infinite;
+  }
+  .hero p { color: var(--text-soft); max-width: 560px; margin: 18px auto 30px; font-size: 1.05rem; }
   .hero .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero .cta .btn:first-child { animation: glowPulse 4s ease-in-out infinite; }
+  @keyframes drift { from { transform: translate(0, 0); } to { transform: translate(40px, 30px); } }
+  @keyframes shine { to { background-position: 200% center; } }
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 10px #00cc99, 0 0 20px rgba(0,204,153,0.6); }
+    50% { box-shadow: 0 0 15px #3399ff, 0 0 25px rgba(51,153,255,0.6); }
+  }
 
+  /* ---------- Sections ---------- */
   main { max-width: 1200px; margin: 0 auto; padding: 0 20px 60px; }
-  .category { padding-top: 50px; }
-  .category > h2 { font-size: 2rem; margin-bottom: 6px; display: flex; align-items: center; gap: 12px; }
-  .category > h2::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, var(--accent-2), transparent); }
+  .category { padding-top: 56px; }
+  .category > h2 { font-family: var(--serif); font-size: 2.1rem; margin-bottom: 6px; display: flex; align-items: center; gap: 14px; }
+  .category > h2::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent-2), transparent); border-radius: 2px; }
   .category > .sub { color: var(--muted); margin-bottom: 10px; }
-  .genre { margin-top: 36px; }
-  .genre h3 { font-size: 1.3rem; margin-bottom: 14px; padding-left: 12px; border-left: 4px solid var(--accent); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; }
-  .card { background: var(--panel); border-radius: var(--radius); overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid #261f35; position: relative; display: block; }
+  .genre { margin-top: 38px; }
+  .genre h3 { font-size: 1.25rem; margin-bottom: 14px; padding-left: 12px; border-left: 4px solid var(--accent); letter-spacing: 0.2px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 20px; }
+  .card {
+    background: var(--panel); border-radius: var(--radius); overflow: hidden; position: relative; display: block;
+    border: 1px solid var(--line);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  }
   .card.upload { cursor: pointer; }
-  .card:hover { transform: translateY(-6px); box-shadow: 0 12px 28px rgba(0,0,0,0.5); }
-  .poster { aspect-ratio: 2/3; display: flex; align-items: center; justify-content: center; font-size: 3.2rem; font-weight: 800; color: rgba(255,255,255,0.85); background-size: cover; background-position: center; }
+  .card:hover { transform: translateY(-6px); border-color: rgba(0,204,153,0.6); box-shadow: 0 0 18px rgba(0,204,153,0.35), 0 14px 30px rgba(0,0,0,0.5); }
+  .poster {
+    position: relative; aspect-ratio: 2/3; display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 3.4rem; font-weight: 700; color: rgba(255,255,255,0.88);
+    background-size: cover; background-position: center;
+  }
+  .poster::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 45%; background: linear-gradient(to top, rgba(26,26,26,0.9), transparent); }
   .info { padding: 12px 14px 14px; }
   .info h4 { font-size: 0.95rem; line-height: 1.3; word-break: break-word; }
   .info span { font-size: 0.8rem; color: var(--muted); }
-  .badge { position: absolute; top: 10px; left: 10px; background: var(--accent-2); color: #14091f; font-size: 0.7rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
+  .badge { position: absolute; z-index: 2; top: 10px; left: 10px; background: var(--accent-2); color: #111; font-size: 0.7rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; box-shadow: 0 0 10px rgba(51,153,255,0.6); }
   .empty { color: var(--muted); padding: 30px 0; display: none; }
 
   /* ---------- Upload section ---------- */
-  .upload-box { background: var(--panel); border: 1px solid #2a2238; border-radius: 18px; padding: 26px; max-width: 720px; }
+  .upload-box { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 26px; max-width: 720px; box-shadow: 0 0 24px rgba(0,204,153,0.06); }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
   textarea { min-height: 90px; resize: vertical; }
   .hint { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
 
+  /* ---------- My uploads ---------- */
+  .mine-count { color: var(--accent); font-size: 0.9rem; margin-left: 8px; }
+  .mine-actions { display: flex; gap: 8px; padding: 0 14px 14px; }
+  .mine-actions .btn { flex: 1; padding: 7px 10px; font-size: 0.8rem; text-align: center; }
+  .mine-empty { color: var(--muted); background: var(--panel); border: 1px dashed #333; border-radius: var(--radius); padding: 30px; text-align: center; }
+
   /* ---------- Modals ---------- */
-  .modal { position: fixed; inset: 0; z-index: 100; background: rgba(5,3,10,0.82); display: flex; align-items: center; justify-content: center; padding: 18px; }
-  .modal-box { background: var(--panel); border: 1px solid #2f2640; border-radius: 18px; width: 100%; max-width: 680px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+  .modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.88); display: flex; align-items: center; justify-content: center; padding: 18px; }
+  .modal-box { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; width: 100%; max-width: 680px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 30px rgba(0,204,153,0.14), 0 24px 60px rgba(0,0,0,0.6); }
   .modal-box.wide { max-width: 900px; }
-  .modal-head { padding: 20px 24px 12px; border-bottom: 1px solid #2a2238; }
-  .modal-head h2 { font-size: 1.3rem; }
+  .modal-head { padding: 20px 24px 12px; border-bottom: 1px solid var(--line); }
+  .modal-head h2 { font-family: var(--serif); font-size: 1.35rem; }
   .modal-head p { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
   .modal-body { padding: 18px 24px; overflow-y: auto; }
-  .modal-foot { padding: 14px 24px 20px; border-top: 1px solid #2a2238; }
-  .legal-text { font-size: 0.9rem; color: #ddd6ee; }
+  .modal-foot { padding: 14px 24px 20px; border-top: 1px solid var(--line); }
+  .legal-text { font-size: 0.9rem; color: var(--text-soft); }
   .legal-text h4 { margin: 16px 0 4px; color: var(--accent); font-size: 0.95rem; }
   .legal-text ul { margin-left: 20px; }
   .scroll-hint { font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; }
   video { width: 100%; max-height: 62vh; background: #000; border-radius: 10px; }
   .modal-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 
-  footer { text-align: center; color: var(--muted); padding: 30px 20px; border-top: 1px solid #2a2238; font-size: 0.88rem; }
-  footer a { text-decoration: underline; margin: 0 8px; cursor: pointer; }
+  footer { text-align: center; color: var(--muted); padding: 34px 20px; border-top: 1px solid var(--line); font-size: 0.88rem; }
+  footer a { text-decoration: underline; text-decoration-color: var(--accent); margin: 0 8px; cursor: pointer; transition: color 0.25s; }
+  footer a:hover { color: var(--accent); }
 
   @media (max-width: 760px) {
     .bar { flex-wrap: wrap; gap: 12px; }
     .right { margin-left: 0; width: 100%; }
     .search { flex: 1; } .search input { width: 100%; }
     html { scroll-padding-top: 190px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
   }
 </style>
 </head>
@@ -166,7 +224,7 @@
 <!-- ================= LOGIN / SIGN-UP ================= -->
 <div id="authScreen">
   <div class="auth-box">
-    <div class="logo">Kitsu<span>ne</span></div>
+    <div class="logo">Peaceful <span>Chebakia</span></div>
     <p class="tagline">Sign in with your email to browse and share.</p>
 
     <div class="tabs">
@@ -197,11 +255,12 @@
 <div id="app" hidden>
   <header>
     <div class="bar">
-      <a href="#top" class="logo">Kitsu<span>ne</span></a>
+      <a href="#top" class="logo">Peaceful <span>Chebakia</span></a>
       <nav>
         <a href="#anime" class="active">Anime</a>
         <a href="#movies">Movies</a>
         <a href="#upload">Upload</a>
+        <a href="#my-uploads">My Uploads</a>
       </nav>
       <div class="right">
         <div class="search"><input type="search" id="search" placeholder="Search titles..."></div>
@@ -280,12 +339,18 @@
       </div>
     </section>
 
+    <section class="category" id="my-uploads">
+      <h2>My Uploads</h2>
+      <p class="sub">Everything you have shared.<span class="mine-count" id="mineCount"></span></p>
+      <div id="mineGrid"></div>
+    </section>
+
     <p class="empty" id="noResults">No titles match your search.</p>
   </main>
 
   <footer>
     <div>
-      &copy; <span id="year"></span> Kitsune.
+      &copy; <span id="year"></span> Peaceful Chebakia.
       <a id="viewLegal">Creator Legal Certificate</a>
       <a id="openTakedown">Copyright / Takedown</a>
     </div>
@@ -301,7 +366,7 @@
       <p>Please read this carefully. You will only be asked to do this once.</p>
     </div>
     <div class="modal-body legal-text" id="legalBody">
-      <p>This certificate explains your legal responsibilities as a user of Kitsune ("the Site"), especially when you upload content.</p>
+      <p>This certificate explains your legal responsibilities as a user of Peaceful Chebakia ("the Site"), especially when you upload content.</p>
 
       <h4>1. You must own or be licensed for what you upload</h4>
       <p>You may only upload videos, images, audio and text that you created yourself, or for which you hold written permission or a valid licence that allows you to publish it on this Site.</p>
@@ -363,7 +428,7 @@
     </div>
     <div class="modal-body">
       <video id="plVideo" controls controlsList="nodownload"></video>
-      <p id="plDesc" style="margin-top:12px;color:#ddd6ee;font-size:0.92rem"></p>
+      <p id="plDesc" style="margin-top:12px;color:var(--text-soft);font-size:0.92rem"></p>
       <div class="modal-actions">
         <button class="btn alt small" id="plReport">Report / copyright concern</button>
         <button class="btn alt small" id="plDelete" hidden style="color:var(--danger)">Delete my upload</button>
@@ -581,14 +646,27 @@ function makeCard(title, year, upload, posterUrl) {
   if (posterUrl) {
     poster.style.backgroundImage = `url("${posterUrl}")`;
   } else {
-    const h = hash(title) % 360;
-    poster.style.background = `linear-gradient(145deg,hsl(${h},60%,38%),hsl(${(h + 50) % 360},65%,22%))`;
+    const h = 150 + (hash(title) % 70);
+    poster.style.background = `linear-gradient(145deg,hsl(${h},55%,30%),hsl(${h + 25},60%,14%))`;
     poster.textContent = title.replace(/^(the|a|an)\s+/i, "").charAt(0).toUpperCase();
   }
   card.append(poster);
   const info = el("div", "info"); info.append(el("h4", "", title), el("span", "", String(year || "")));
   card.append(info);
   if (upload) { card.append(el("div", "badge", "Community")); card.onclick = () => openPlayer(upload); }
+  return card;
+}
+
+function makeMineCard(r, posterUrl) {
+  const card = makeCard(r.title, r.year, null, posterUrl);
+  const meta = el("div", "", `${r.genre} · ${new Date(r.created_at).toLocaleDateString()}`);
+  meta.style.cssText = "font-size:0.78rem;color:var(--muted);margin-top:2px";
+  card.querySelector(".info").append(meta);
+  const actions = el("div", "mine-actions");
+  const play = el("button", "btn small", "Play"); play.onclick = () => openPlayer(r);
+  const del = el("button", "btn small danger", "Delete"); del.onclick = () => deleteUpload(r);
+  actions.append(play, del);
+  card.append(actions);
   return card;
 }
 
@@ -609,13 +687,24 @@ async function renderAll() {
   grids["Anime"].replaceChildren(...sampleAnime.map(([t, y]) => makeCard(t, y)));
   Object.entries(sampleMovies).forEach(([g, list]) => grids[g].replaceChildren(...list.map(([t, y]) => makeCard(t, y))));
   rows.forEach(r => { if (grids[r.genre]) grids[r.genre].prepend(makeCard(r.title, r.year, r, urlMap[r.poster_path])); });
+  // My Uploads page: only this user's own rows
+  const mine = user ? rows.filter(r => r.owner === user.id) : [];
+  $("#mineCount").textContent = mine.length ? ` ${mine.length} upload${mine.length === 1 ? "" : "s"}` : "";
+  const mg = $("#mineGrid");
+  if (mine.length) {
+    mg.className = "grid";
+    mg.replaceChildren(...mine.map(r => makeMineCard(r, urlMap[r.poster_path])));
+  } else {
+    mg.className = "";
+    mg.replaceChildren(el("div", "mine-empty", "You haven't uploaded anything yet. Use the Upload section above to share your first title."));
+  }
   applySearch();
 }
 
 function applySearch() {
   const q = $("#search").value.trim().toLowerCase();
   let total = 0;
-  document.querySelectorAll(".card").forEach(c => { const show = c.dataset.title.includes(q); c.style.display = show ? "" : "none"; if (show) total++; });
+  document.querySelectorAll("#anime .card, #movies .card").forEach(c => { const show = c.dataset.title.includes(q); c.style.display = show ? "" : "none"; if (show) total++; });
   document.querySelectorAll(".genre").forEach(g => { g.style.display = [...g.querySelectorAll(".card")].some(c => c.style.display !== "none") ? "" : "none"; });
   $("#noResults").style.display = total === 0 ? "block" : "none";
 }
@@ -685,14 +774,16 @@ function closePlayer() {
   $("#playerModal").hidden = true;
 }
 $("#plClose").onclick = closePlayer;
-$("#plDelete").onclick = async () => {
-  if (!currentUpload || !user || currentUpload.owner !== user.id) return;
-  if (!confirm("Delete this upload permanently?")) return;
-  const { error } = await sb.from("uploads").delete().eq("id", currentUpload.id);
-  if (error) return alert("Could not delete: " + error.message);
-  await sb.storage.from(BUCKET).remove([currentUpload.video_path, currentUpload.poster_path].filter(Boolean));
-  closePlayer(); renderAll();
-};
+async function deleteUpload(u) {
+  if (!u || !user || u.owner !== user.id) return false;
+  if (!confirm(`Delete "${u.title}" permanently?`)) return false;
+  const { error } = await sb.from("uploads").delete().eq("id", u.id);
+  if (error) { alert("Could not delete: " + error.message); return false; }
+  await sb.storage.from(BUCKET).remove([u.video_path, u.poster_path].filter(Boolean));
+  await renderAll();
+  return true;
+}
+$("#plDelete").onclick = async () => { if (await deleteUpload(currentUpload)) closePlayer(); };
 $("#plReport").onclick = () => { const t = currentUpload ? currentUpload.title : ""; closePlayer(); openTakedown(t); };
 
 /* ---------- Takedown ---------- */
@@ -721,6 +812,7 @@ window.addEventListener("scroll", () => {
   let idx = 0;
   if (top("#movies") < 200) idx = 1;
   if (top("#upload") < 200) idx = 2;
+  if (top("#my-uploads") < 200) idx = 3;
   links.forEach((l, i) => l.classList.toggle("active", i === idx));
 });
 
